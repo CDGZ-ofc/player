@@ -1,0 +1,8 @@
+{
+  "name": "applemusic-like-lyrics-opensource",
+  "private": true,
+  "license": "AGPL-3.0",
+  "devDependencies": {
+    "@biomejs/biome": "^1.8.3"
+  }
+}

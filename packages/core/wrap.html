@@ -1,0 +1,46 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>wrap</title>
+<style>html,body{margin:0;height:100%;background:#111}#h{width:520px;height:700px;--amll-lp-font-size:60px}</style></head>
+<body><div id="h"></div>
+<script type="module">
+import { LyricPlayer } from "/src/lyric-player/index.ts";
+import "/src/styles/index.css";
+import { parseTTML } from "@applemusic-like-lyrics/ttml";
+const lp = new LyricPlayer();
+document.getElementById("h").appendChild(lp.getElement());
+lp.setLyricLines(parseTTML(await (await fetch("/rt.ttml")).text()).lyricLines);
+let last=-1; const f=t=>{if(last<0)last=t;lp.update(t-last);last=t;requestAnimationFrame(f);};requestAnimationFrame(f);
+window.__seek = ms => lp.setCurrentTime(ms, true);
+window.__rowSpace = v => { let s=document.getElementById("rs"); if(!s){s=document.createElement("style");s.id="rs";document.head.appendChild(s);}
+  s.textContent = `.amll-lyric-player{--amll-lp-ruby-row-space:${v};}`; };
+// For every ruby, find the nearest text row ABOVE it inside the same line and
+// measure the clearance between that row's glyph bottom and the ruby's top.
+window.__wrapCheck = () => {
+  const res=[];
+  for (const main of document.querySelectorAll("div")) {
+    if(!/lyricMainLine/.test(main.className||"")) continue;
+    const words=[...main.querySelectorAll("span")].filter(s=>!/_ruby_/.test(s.className||"")&&s.firstChild&&s.firstChild.nodeType===3);
+    if(!words.length) continue;
+    // group words into visual rows by content-box top
+    const rows=new Map();
+    for(const w of words){
+      const cs=getComputedStyle(w), pt=Number.parseFloat(cs.paddingTop)||0, pb=Number.parseFloat(cs.paddingBottom)||0;
+      const r=w.getBoundingClientRect();
+      const cTop=r.top+pt, cBot=r.bottom-pb;
+      const key=Math.round(cTop/8);
+      if(!rows.has(key)) rows.set(key,{top:cTop,bot:cBot});
+      else { const e=rows.get(key); e.top=Math.min(e.top,cTop); e.bot=Math.max(e.bot,cBot); }
+    }
+    const rowList=[...rows.values()].sort((a,b)=>a.top-b.top);
+    if(rowList.length<2) continue;
+    for(const rt of main.querySelectorAll("span")){
+      if(!/_ruby_/.test(rt.className||"")) continue;
+      const rr=rt.getBoundingClientRect();
+      const above=rowList.filter(r=>r.bot<=rr.bottom+1&&r.top<rr.top).pop();
+      if(!above) continue;
+      res.push({t:rt.textContent, clearance:+(rr.top-above.bot).toFixed(2), rows:rowList.length});
+    }
+  }
+  return res;
+};
+window.__ready=true;
+</script></body></html>

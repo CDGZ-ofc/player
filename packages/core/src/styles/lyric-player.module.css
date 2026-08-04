@@ -1,0 +1,190 @@
+
+
+:global(.amll-lyric-player):hover .lyricLine {
+    filter: none !important;
+}
+
+.lyricLine {
+    position: absolute;
+    backface-visibility: hidden;
+    transform-origin: left;
+    width: var(--amll-lp-line-width, 100%);
+    min-width: var(--amll-lp-line-width, 100%);
+    max-width: var(--amll-lp-line-width, 100%);
+    height: fit-content;
+    
+    padding: calc(1.5vh + var(--amll-lp-ruby-space-active, 0px)) var(--amll-lp-line-padding-x, 1em) 1.5vh;
+    contain: layout;
+    will-change: filter, transform, opacity;
+    transition: filter 0.2s, background-color 0.25s, box-shadow 0.25s;
+    box-sizing: content-box;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+
+    &:has(> *):hover {
+        background-color: var(--amll-lp-hover-bg-color, #fff1);
+        box-shadow: 0 0 0 4px var(--amll-lp-hover-bg-color, #fff1);
+    }
+
+    &:has(> *):active {
+        box-shadow: 0 0 0 var(--amll-lp-hover-bg-color, #fff1);
+    }
+}
+
+.lyricBgLine {
+    opacity: 0;
+    font-size: max(calc(100% * var(--amll-lp-bg-line-scale, 70%)), 10px);
+    transition: opacity 0.25s, scale 0.5s, filter 0.2s, background-color 0.25s, box-shadow 0.25s;
+
+    
+    padding: calc(0.75vh + var(--amll-lp-ruby-space-active, 0px)) calc(var(--amll-lp-line-padding-x, 1em) / var(--amll-lp-bg-line-scale, 0.7)) 0.75vh;
+
+    &.active {
+        transition: opacity 0.5s 0.25s, scale 1.5s cubic-bezier(0, 1, 0, 1) 0.25s, filter 0.2s, background-color 0.25s, box-shadow 0.25s;
+        opacity: 0.4;
+    }
+}
+
+.lyricDuetLine {
+    text-align: right;
+    transform-origin: right;
+}
+
+.lyricMainLine {
+    font-size: 0.86em;
+    font-weight: 600;
+    transition: opacity 0.3s 0.1s;
+    will-change: opacity;
+    margin: -1em;
+    padding: 1em;
+    text-wrap: balance;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+
+    &:has(> span) {
+        text-wrap: wrap;
+    }
+
+    & span {
+        display: inline-block;
+    }
+
+    &>span,
+    span.emphasizeWrapper {
+        white-space: pre-wrap;
+        will-change: transform, display, mask-image;
+        display: inline-block;
+        padding: 1em;
+        margin: -1em;
+        
+        
+        word-break: normal;
+        overflow-wrap: break-word;
+        white-space: normal;
+        max-width: 100%;
+
+        &.emphasize,
+        span.emphasize {
+            padding: 1em;
+            margin: -1em;
+            will-change: transform;
+            backface-visibility: hidden;
+
+            &>span {
+                padding: 1em;
+                margin: -1em;
+                will-change: transform;
+                backface-visibility: hidden;
+            }
+        }
+    }
+
+    
+    & span.hasRuby {
+        position: relative;
+        
+        padding: calc(1em + var(--amll-lp-ruby-row-space, 0.4em)) 1em 1em;
+        margin: -1em;
+        
+        white-space: nowrap;
+        
+        text-align: center;
+    }
+
+    
+    & span.ruby {
+        display: block;
+        position: absolute;
+        
+        bottom: calc(
+            (1em + var(--amll-lp-ruby-row-space, 0.4em)) /
+            var(--amll-lp-ruby-scale, 0.42) * -1 + 100%
+        );
+        left: 50%;
+        
+        width: max-content;
+        transform: translateX(-50%);
+        transform-origin: 50% 100%;
+
+        font-size: calc(1em * var(--amll-lp-ruby-scale, 0.42));
+        line-height: 1;
+        
+        font-weight: var(--amll-lp-ruby-weight, 600);
+        letter-spacing: 0.02em;
+        opacity: var(--amll-lp-ruby-opacity, 0.75);
+        white-space: nowrap;
+        pointer-events: none;
+        text-align: center;
+        
+        padding: 0;
+        margin: 0;
+        
+    }
+}
+
+.lyricSubLine {
+    font-size: max(0.5em, 10px);
+    font-weight: 500;
+    transition: opacity 0.2s 0.25s;
+    opacity: 0.3;
+}
+
+.disableSpring>* {
+    transition: filter 0.25s, transform 0.5s, background-color 0.25s, box-shadow 0.25s;
+}
+
+.interludeDots {
+    height: clamp(0.5em, 1vh, 3em);
+    transform-origin: center;
+    width: fit-content;
+    padding: 2.5% var(--amll-lp-line-padding-x, 1em);
+    position: absolute;
+    display: flex;
+    gap: 0.25em;
+    left: 1em;
+
+    &>* {
+        height: clamp(0.5em, 1vh, 3em);
+        display: inline-block;
+        border-radius: 50%;
+        aspect-ratio: 1 / 1;
+        background-color: var(--amll-lp-color, white);
+        margin-right: 4px;
+    }
+
+    &.duet {
+        right: 1em;
+        transform-origin: center;
+    }
+}
+
+@supports (mix-blend-mode: plus-lighter) {
+    .lyricSubLine {
+        opacity: 0.3;
+    }
+}
+
+.tmpDisableTransition {
+    transition: none !important;
+}
