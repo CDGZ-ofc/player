@@ -13,6 +13,7 @@ const HIRAGANA_KATAKANA = /[\u3040-\u309F\u30A0-\u30FF\uFF65-\uFF9F]/;
 const ENGLISH_WORD = /[a-zA-Z]+/g;
 const ZWSP = "\u200B";
 
+
 const RUBY_MIN_GAP = 0.25;
 
 function containsJapanese(text: string): boolean {
@@ -32,11 +33,13 @@ interface RealWord extends LyricWord {
 	height: number;
 	padding: number;
 	shouldEmphasize: boolean;
-	
+
 	rubyElement?: HTMLSpanElement;
-	
+
 	rubyReservedWidth?: number;
 }
+
+
 
 function generateFadeGradient(
 	width: number,
@@ -199,7 +202,6 @@ export class LyricLineEl extends EventTarget implements HasElement, Disposable {
 		scale: new Spring(100),
 	};
 
-	
 	setLyricAdvanceDynamicLyricTime(enable: boolean) {
 		this.lyricAdvanceDynamicLyricTime = enable;
 	}
@@ -748,7 +750,7 @@ export class LyricLineEl extends EventTarget implements HasElement, Disposable {
 		trans.innerText = this.lyricLine.translatedLyric;
 		roman.innerText = this.lyricLine.romanLyric;
 	}
-	
+
 	private appendRubyElement(
 		mainWordEl: HTMLSpanElement,
 		word: LyricWord,
@@ -764,7 +766,7 @@ export class LyricLineEl extends EventTarget implements HasElement, Disposable {
 		mainWordEl.appendChild(rubyEl);
 		return rubyEl;
 	}
-	
+
 	private async reserveRubyWidth() {
 		const rubyWords = this.splittedWords.filter((w) => w.rubyElement);
 		if (rubyWords.length === 0) return;
@@ -1215,6 +1217,65 @@ export class LyricLineEl extends EventTarget implements HasElement, Disposable {
 			}
 		}
 	}
+	private currentBrightAlpha = 1.0;
+	private currentDarkAlpha = 0.2;
+	private targetBrightAlpha = 1.0;
+	private targetDarkAlpha = 0.2;
+
+
+	private updateMaskAlphaTargets(scale: number) {
+		const factor = Math.max(0.0, Math.min(1.0, (scale - 0.97) / 0.03));
+		const dynamicDarkAlpha = factor * 0.2 + 0.2;
+		const dynamicBrightAlpha = factor * 0.8 + 0.2;
+
+		if (this.isEnabled) {
+			this.targetBrightAlpha = dynamicBrightAlpha;
+			this.targetDarkAlpha = dynamicDarkAlpha;
+		} else {
+			this.targetBrightAlpha = dynamicDarkAlpha;
+			this.targetDarkAlpha = dynamicDarkAlpha;
+		}
+	}
+
+
+	private applyAlphaToDom(delta: number) {
+		const dt = delta || 0.016;
+		const ATTACK_SPEED = 50.0;
+		const RELEASE_SPEED = 7.0;
+		const getFactor = (speed: number) => 1 - Math.exp(-speed * dt);
+
+		const isBrightening = this.targetBrightAlpha > this.currentBrightAlpha;
+		const brightSpeed = isBrightening ? ATTACK_SPEED : RELEASE_SPEED;
+		const brightFactor = getFactor(brightSpeed);
+
+		if (Math.abs(this.targetBrightAlpha - this.currentBrightAlpha) < 0.001) {
+			this.currentBrightAlpha = this.targetBrightAlpha;
+		} else {
+			this.currentBrightAlpha +=
+				(this.targetBrightAlpha - this.currentBrightAlpha) * brightFactor;
+		}
+
+		const isDarkening = this.targetDarkAlpha > this.currentDarkAlpha;
+		const darkSpeed = isDarkening ? ATTACK_SPEED : RELEASE_SPEED;
+		const darkFactor = getFactor(darkSpeed);
+
+		if (Math.abs(this.targetDarkAlpha - this.currentDarkAlpha) < 0.001) {
+			this.currentDarkAlpha = this.targetDarkAlpha;
+		} else {
+			this.currentDarkAlpha +=
+				(this.targetDarkAlpha - this.currentDarkAlpha) * darkFactor;
+		}
+
+		this.element.style.setProperty(
+			"--bright-mask-alpha",
+			this.currentBrightAlpha.toFixed(3),
+		);
+		this.element.style.setProperty(
+			"--dark-mask-alpha",
+			this.currentDarkAlpha.toFixed(3),
+		);
+	}
+
 	update(delta = 0) {
 		if (!this.lyricPlayer.getEnableSpring()) return;
 		this.lineTransforms.posX.update(delta);
@@ -1229,34 +1290,10 @@ export class LyricLineEl extends EventTarget implements HasElement, Disposable {
 			this.hide();
 		}
 		if (this.lyricPlayer.getEnableSpring()) {
-			this.element.style.setProperty(
-				"--bright-mask-alpha",
-				`${
-					Math.max(
-						0.0,
-						Math.min(
-							1.0,
-							this.lineTransforms.scale.getCurrentPosition() / 100 - 0.97,
-						) / 0.03,
-					) *
-						0.8 +
-					0.2
-				}`,
+			this.updateMaskAlphaTargets(
+				this.lineTransforms.scale.getCurrentPosition() / 100,
 			);
-			this.element.style.setProperty(
-				"--dark-mask-alpha",
-				`${
-					Math.max(
-						0.0,
-						Math.min(
-							1.0,
-							this.lineTransforms.scale.getCurrentPosition() / 100 - 0.97,
-						) / 0.03,
-					) *
-						0.2 +
-					0.2
-				}`,
-			);
+			this.applyAlphaToDom(delta);
 		} else {
 			const computedStyle = window.getComputedStyle(this.element);
 			const transform = computedStyle.transform;
